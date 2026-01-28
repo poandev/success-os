@@ -51,7 +51,7 @@ export async function POST(
 // DELETE: 取消今日打卡
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   await dbConnect();
   try {
