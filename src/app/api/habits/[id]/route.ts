@@ -5,7 +5,7 @@ import { Habit } from "@/models/Habit";
 // PATCH: 更新習慣資料
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   await dbConnect();
   try {
@@ -33,7 +33,7 @@ export async function PATCH(
 // DELETE: 刪除習慣
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   await dbConnect();
   try {
