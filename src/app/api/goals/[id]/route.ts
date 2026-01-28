@@ -1,41 +1,39 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server"; // 建議改用 NextRequest
 import dbConnect from "@/lib/mongodb";
 import { Goal } from "@/models/Goal";
 
-// 已經在之前的步驟建立，這裡確保包含 PATCH 邏輯
+// 更新目標 (PATCH)
 export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } },
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }, // 關鍵：這裡改為 Promise
 ) {
   try {
     await dbConnect();
+
+    // 關鍵：必須 await params
     const { id } = await params;
-    const body = await req.json();
-    const updatedGoal = await Goal.findByIdAndUpdate(id, body, {
-      new: true,
-    });
+
+    const body = await request.json();
+    const updatedGoal = await Goal.findByIdAndUpdate(id, body, { new: true });
 
     if (!updatedGoal) {
       return NextResponse.json({ error: "找不到該目標" }, { status: 404 });
     }
 
     return NextResponse.json(updatedGoal);
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "刪除失敗" },
-      { status: 500 },
-    );
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
 
-// DELETE: 刪除特定目標
+// 刪除目標 (DELETE) - 同理也要修正
 export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } },
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }, // 這裡也同步修正
 ) {
   try {
     await dbConnect();
-    const { id } = await params;
+    const { id } = await params; // 這裡也要 await
 
     const deletedGoal = await Goal.findByIdAndDelete(id);
 
@@ -44,10 +42,7 @@ export async function DELETE(
     }
 
     return NextResponse.json({ message: "目標已成功刪除" });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "刪除失敗" },
-      { status: 500 },
-    );
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
