@@ -4,11 +4,11 @@ import { Habit } from "@/models/Habit";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   await dbConnect();
   try {
-    const { id } = await params;
+    const { id } = await params; // 這裡也要 await
     const today = new Date().toISOString().split("T")[0];
     const habit = await Habit.findById(id);
 
