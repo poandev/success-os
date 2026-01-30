@@ -289,7 +289,7 @@ export default function CalendarCommandCenter() {
       });
     }
 
-    fetchData();
+    fetchData(); // 確保後端資料同步
   };
 
   const handleDelete = async () => {
@@ -322,8 +322,11 @@ export default function CalendarCommandCenter() {
     }
   };
 
+  // 🔥 核心優化：大石頭瞬間排程 (Optimistic Update) 🔥
   const scheduleRockToToday = async (rock: BigRock, hour: number) => {
-    const newEvent = {
+    // 1. 建立新活動物件 (帶有臨時 ID)
+    const newEvent: CalendarEvent = {
+      _id: "temp-" + Date.now(),
       title: rock.task,
       date: todayStr,
       startTime: `${String(hour).padStart(2, "0")}:00`,
@@ -332,34 +335,50 @@ export default function CalendarCommandCenter() {
       isCompleted: false,
     };
 
-    if (weekPlan) {
-      const originalIndex = weekPlan.bigRocks.findIndex(
-        (r) => r.task === rock.task,
-      );
-      if (originalIndex !== -1) {
-        const newRocks = [...weekPlan.bigRocks];
-        newRocks[originalIndex].targetDate = todayStr;
+    // 2. 立即更新 UI (不用等 API 回傳，感覺更快)
+    setTodayEvents((prev) => [...prev, newEvent]); // 行事曆馬上出現
+    setPendingRocks((prev) => prev.filter((_, i) => i !== selectedRockIndex)); // 待辦清單馬上移除
 
-        await fetch("/api/weekly-plans", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            weekIdentifier: weekPlan.weekIdentifier,
-            bigRocks: newRocks,
-          }),
-        });
-      }
-    }
-
-    await fetch("/api/calendar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newEvent),
-    });
-
+    // 3. 重置狀態
     setSelectedRockIndex(null);
     setIsDrawerOpen(false);
-    fetchData();
+
+    // 4. 背景執行 API 請求
+    try {
+      // 更新週計畫 (標記該石頭已排程)
+      if (weekPlan) {
+        const originalIndex = weekPlan.bigRocks.findIndex(
+          (r) => r.task === rock.task,
+        );
+        if (originalIndex !== -1) {
+          const newRocks = [...weekPlan.bigRocks];
+          newRocks[originalIndex].targetDate = todayStr;
+
+          await fetch("/api/weekly-plans", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              weekIdentifier: weekPlan.weekIdentifier,
+              bigRocks: newRocks,
+            }),
+          });
+        }
+      }
+
+      // 寫入行事曆資料庫
+      await fetch("/api/calendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newEvent, _id: undefined }), // 移除臨時 ID
+      });
+
+      // 最後再悄悄同步一次，確保 ID 正確
+      fetchData();
+    } catch (error) {
+      console.error("Schedule failed", error);
+      // 如果失敗，理論上應該要 rollback，但這裡先重新抓取資料復原
+      fetchData();
+    }
   };
 
   const toggleHabit = async (id: string, lastDate: string) => {
@@ -776,11 +795,20 @@ export default function CalendarCommandCenter() {
         </div>
       )}
 
-      {/* 提示 */}
+      {/* 🔥 提示與取消選擇按鈕 🔥 */}
       {selectedRockIndex !== null && pendingRocks[selectedRockIndex] && (
-        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-30 bg-indigo-600 text-white px-6 py-3 rounded-full shadow-xl animate-bounce flex items-center gap-2 pointer-events-none shadow-indigo-500/50">
-          <MapPinIcon className="w-5 h-5" />
-          <span className="font-bold text-sm">請點擊時間軸空檔</span>
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-30 bg-indigo-600 text-white px-6 py-3 rounded-full shadow-xl animate-bounce flex items-center gap-3 pointer-events-auto shadow-indigo-500/50">
+          <div className="flex items-center gap-2">
+            <MapPinIcon className="w-5 h-5" />
+            <span className="font-bold text-sm">請點擊時間軸空檔</span>
+          </div>
+          {/* 取消按鈕 */}
+          <button
+            onClick={() => setSelectedRockIndex(null)}
+            className="p-1 bg-white/20 rounded-full hover:bg-white/40 transition-colors"
+          >
+            <XMarkIcon className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>
