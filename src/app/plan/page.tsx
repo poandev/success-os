@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation"; // 1. 引入路由
 import {
   MapIcon,
   CalendarDaysIcon,
@@ -17,6 +18,11 @@ import CalendarCommandCenter from "@/components/planning/CalendarCommandCenter";
 
 export default function PlanningPage() {
   const [view, setView] = useState("Flow");
+  const router = useRouter(); // 2. 初始化路由
+
+  // 3. 長按邏輯 Refs
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPress = useRef(false);
 
   const navItems = [
     { id: "Goal", label: "願景", icon: MapIcon },
@@ -25,6 +31,36 @@ export default function PlanningPage() {
     { id: "Execute", label: "執行", icon: ClipboardDocumentCheckIcon },
     { id: "Flow", label: "戰情", icon: BoltIcon },
   ];
+
+  // 4. 開始按壓 (手機/滑鼠)
+  const handlePressStart = () => {
+    isLongPress.current = false; // 重置狀態
+    timerRef.current = setTimeout(() => {
+      isLongPress.current = true; // 標記為長按
+      // 觸發震動回饋 (僅手機有效)
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      // 跳轉回首頁
+      router.push("/");
+    }, 800); // 設定長按時間為 800ms
+  };
+
+  // 5. 結束按壓 (清除計時器)
+  const handlePressEnd = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+  };
+
+  // 6. 點擊處理 (區分點擊與長按)
+  const handleClick = (id: string) => {
+    if (isLongPress.current) {
+      // 如果觸發了長按，則忽略這次的 Click 事件
+      return;
+    }
+    setView(id);
+  };
 
   return (
     <main className="h-[100dvh] w-full bg-[#09090b] text-white flex flex-col overflow-hidden relative">
@@ -37,16 +73,23 @@ export default function PlanningPage() {
       )}
 
       {/* 頂部導航切換器 */}
-      {/* 🔥 修正：使用 z-[100] 確保層級最高 */}
+      {/* 使用 z-[100] 確保層級最高 */}
       <div className="flex-shrink-0 px-2 pt-4 pb-2 z-[100] relative">
-        <div className="mx-auto max-w-lg bg-white/5 backdrop-blur-xl border border-white/10 p-1.5 rounded-[2rem] shadow-lg flex justify-between items-center overflow-x-auto scrollbar-hide">
+        <div className="mx-auto max-w-lg bg-white/5 backdrop-blur-xl border border-white/10 p-1.5 rounded-[2rem] shadow-lg flex justify-between items-center overflow-x-auto scrollbar-hide select-none">
           {navItems.map((item) => {
             const isActive = view === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => setView(item.id)}
-                className={`relative flex items-center justify-center gap-1.5 px-3 py-3 rounded-[1.5rem] text-sm font-bold transition-all duration-300 flex-1 min-w-[4.5rem] flex-shrink-0
+                // --- 綁定事件 ---
+                onTouchStart={handlePressStart}
+                onTouchEnd={handlePressEnd}
+                onMouseDown={handlePressStart}
+                onMouseUp={handlePressEnd}
+                onMouseLeave={handlePressEnd} // 滑開也算結束
+                onClick={() => handleClick(item.id)}
+                // ----------------
+                className={`relative flex items-center justify-center gap-1.5 px-3 py-3 rounded-[1.5rem] text-sm font-bold transition-all duration-300 flex-1 min-w-[4.5rem] flex-shrink-0 touch-manipulation
                 ${
                   isActive
                     ? "text-white shadow-lg shadow-indigo-500/25"
