@@ -7,6 +7,8 @@ import {
   isSameDay,
   getYear,
   getWeek,
+  addWeeks,
+  subWeeks,
 } from "date-fns";
 import {
   BoltIcon,
@@ -18,6 +20,9 @@ import {
   MapPinIcon,
   XMarkIcon,
   TrashIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CalendarIcon,
 } from "@heroicons/react/24/solid";
 import {
   RocketLaunchIcon,
@@ -151,7 +156,6 @@ export default function CalendarCommandCenter() {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    // 每分鐘更新一次當前時間顯示
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
@@ -160,6 +164,7 @@ export default function CalendarCommandCenter() {
   useEffect(() => {
     const scrollTimer = setTimeout(() => {
       const currentHour = new Date().getHours();
+      // 這裡您可以決定是否要顯示 01:00-05:00，目前邏輯是從 06:00 開始
       if (currentHour >= 6) {
         const element = document.getElementById(`time-slot-${currentHour}`);
         if (element) {
@@ -214,8 +219,12 @@ export default function CalendarCommandCenter() {
     fetchData();
   }, [selectedDate]);
 
-  // --- 核心功能 ---
+  // --- 新功能：週次切換 & 回到今天 ---
+  const handlePrevWeek = () => setSelectedDate((prev) => subWeeks(prev, 1));
+  const handleNextWeek = () => setSelectedDate((prev) => addWeeks(prev, 1));
+  const handleGoToday = () => setSelectedDate(new Date());
 
+  // --- 核心操作功能 ---
   const handleTimeSlotClick = (hour: number) => {
     if (selectedRockIndex !== null && pendingRocks[selectedRockIndex]) {
       scheduleRockToToday(pendingRocks[selectedRockIndex], hour);
@@ -370,7 +379,7 @@ export default function CalendarCommandCenter() {
   const weekDays = Array.from({ length: 7 }).map((_, i) =>
     addDays(startOfWeek(selectedDate, { weekStartsOn: 1 }), i),
   );
-  const timeSlots = Array.from({ length: 24 }).map((_, i) => i + 1);
+  const timeSlots = Array.from({ length: 19 }).map((_, i) => i + 6);
 
   // 取得當前時間的分鐘數百分比 (用於紅線定位)
   const currentHour = currentTime.getHours();
@@ -390,16 +399,39 @@ export default function CalendarCommandCenter() {
       `}</style>
 
       {/* --- 頂部：日期滑軌 --- */}
-      <div className="flex-shrink-0 z-50 bg-[#09090b]/80 backdrop-blur-md border-b border-white/5 pt-4 pb-2">
+      <div className="flex-shrink-0 z-20 bg-[#09090b]/80 backdrop-blur-md border-b border-white/5 pt-4 pb-2">
         <div className="flex items-center justify-between px-4 mb-3">
-          <h2 className="text-lg font-black tracking-tight flex items-center gap-2">
-            <span className="text-indigo-500">
-              {format(selectedDate, "MMM")}
-            </span>
-            <span>{format(selectedDate, "yyyy")}</span>
-          </h2>
+          {/* 🔥 頂部控制列：日期切換 (按鈕已縮小) 🔥 */}
           <div className="flex items-center gap-2">
-            <div className="h-1.5 w-20 bg-white/10 rounded-full overflow-hidden">
+            <button
+              onClick={handlePrevWeek}
+              className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all active:scale-90"
+            >
+              <ChevronLeftIcon className="w-4 h-4" />
+            </button>
+            <h2 className="text-lg font-black tracking-tight flex items-center gap-2 select-none">
+              <span className="text-indigo-500">
+                {format(selectedDate, "MMM")}
+              </span>
+              <span>{format(selectedDate, "yyyy")}</span>
+            </h2>
+            <button
+              onClick={handleNextWeek}
+              className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all active:scale-90"
+            >
+              <ChevronRightIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleGoToday}
+              className="ml-1 px-2 py-0.5 text-[10px] font-bold bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-md hover:bg-indigo-600 hover:text-white transition-all active:scale-95 flex items-center gap-1"
+            >
+              <CalendarIcon className="w-3 h-3" />
+              今天
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-16 bg-white/10 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-500"
                 style={{
@@ -419,30 +451,29 @@ export default function CalendarCommandCenter() {
             </span>
           </div>
         </div>
-        <div className="flex overflow-x-auto overflow-y-visible scrollbar-hide px-4 gap-3 pb-2">
+        <div className="flex overflow-x-auto scrollbar-hide px-4 gap-3 pb-2">
           {weekDays.map((date, i) => {
             const isSelected = isSameDay(date, selectedDate);
             const isToday = isSameDay(date, new Date());
             return (
-              <div key={i} className="relative mt-2">
-                <button
-                  onClick={() => setSelectedDate(date)}
-                  className={` flex flex-col items-center justify-center min-w-10 w-max h-10 rounded-2xl transition-all duration-300 flex-shrink-0 border
-                  ${isSelected ? "bg-indigo-600 border-indigo-400 shadow-[0_0_15px_rgba(79,70,229,0.4)] transform -translate-y-1" : "bg-white/5 border-transparent text-slate-400 hover:bg-white/10"}`}
+              <button
+                key={i}
+                onClick={() => setSelectedDate(date)}
+                className={`mt-2 flex flex-col items-center justify-center min-w-10 h-10 rounded-2xl transition-all duration-300 flex-shrink-0 border
+                ${isSelected ? "bg-indigo-600 border-indigo-400 shadow-[0_0_15px_rgba(79,70,229,0.4)] transform -translate-y-1" : "bg-white/5 border-transparent text-slate-400 hover:bg-white/10"}`}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                  {format(date, "EEE")}
+                </span>
+                <span
+                  className={`text-[12px] font-black ${isSelected ? "text-white" : isToday ? "text-indigo-400" : "text-slate-200"}`}
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
-                    {format(date, "EEE")}
-                  </span>
-                  <span
-                    className={`text-[12px] font-black ${isSelected ? "text-white" : isToday ? "text-indigo-400" : "text-slate-200"}`}
-                  >
-                    {format(date, "d")}
-                  </span>
-                  {isToday && !isSelected && (
-                    <span className="w-1 h-1 bg-indigo-400 rounded-full mt-1" />
-                  )}
-                </button>
-              </div>
+                  {format(date, "d")}
+                </span>
+                {isToday && !isSelected && (
+                  <span className="w-1 h-1 bg-indigo-400 rounded-full mt-1" />
+                )}
+              </button>
             );
           })}
         </div>
