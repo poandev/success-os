@@ -6,7 +6,7 @@ import WeekPlanView from "@/components/planning/WeekPlanView";
 import DayExecutionView from "@/components/planning/DayExecutionView";
 
 export default function PlanningPage() {
-  const [view, setView] = useState("Day"); // Day, Week, Month, Goal
+  const [view, setView] = useState("Day"); // Day, Week, Month, Goal3
 
   return (
     <main className="max-h-screen min-h-screen bg-slate-900/20 pb-20">
