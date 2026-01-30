@@ -9,9 +9,9 @@ export default function PlanningPage() {
   const [view, setView] = useState("Day"); // Day, Week, Month, Goal
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-20">
+    <main className="max-h-screen min-h-screen bg-slate-900/20 pb-20">
       {/* 頂部切換器：對齊柯維的指南針概念 */}
-      <div className="bg-white p-4 sticky top-0 z-10 shadow-sm flex justify-around">
+      <div className="h-20 bg-black/50 p-4 sticky top-0 z-10 shadow-sm flex justify-around">
         {["Goal", "Month", "Week", "Day"].map((item) => (
           <button
             key={item}
@@ -25,7 +25,7 @@ export default function PlanningPage() {
         ))}
       </div>
 
-      <div className="p-5">
+      <div className="px-1">
         {/* 視圖切換邏輯 */}
         {view === "Goal" && <GoalVisionView />}
         {view === "Month" && <MonthPlanView />}
