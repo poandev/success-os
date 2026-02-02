@@ -52,7 +52,7 @@ export default function Home() {
               <BanknotesIcon className="w-6 h-6 text-emerald-300 group-hover:text-white" />
             </div>
             <div className="mt-4">
-              <h2 className="text-2xl font-bold text-white mb-2">財富戰情</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">財富自由</h2>
               <p className="text-sm text-slate-400 leading-relaxed mb-6">
                 現金流與資產配置。
                 <br />

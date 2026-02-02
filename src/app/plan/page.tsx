@@ -28,8 +28,8 @@ export default function PlanningPage() {
     { id: "Goal", label: "願景", icon: MapIcon },
     { id: "Month", label: "月度", icon: CalendarDaysIcon },
     { id: "Week", label: "每週", icon: QueueListIcon },
-    { id: "Execute", label: "執行", icon: ClipboardDocumentCheckIcon },
-    { id: "Flow", label: "戰情", icon: BoltIcon },
+    { id: "Execute", label: "習慣", icon: ClipboardDocumentCheckIcon },
+    { id: "Flow", label: "日曆", icon: BoltIcon },
   ];
 
   // 4. 開始按壓 (手機/滑鼠)

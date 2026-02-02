@@ -49,7 +49,7 @@ const CATEGORIES = {
 };
 
 export default function FinanceDashboard() {
-  const [tab, setTab] = useState<"Invest" | "Cashflow">("Invest"); // 預設可改為 Cashflow 方便測試
+  const [tab, setTab] = useState<"Invest" | "Cashflow">("Cashflow"); // 預設可改為 Cashflow 方便測試
   const [showModal, setShowModal] = useState(false); // 股票 Modal
   const [showTransModal, setShowTransModal] = useState(false); // 記帳 Modal
   const [loading, setLoading] = useState(true);
