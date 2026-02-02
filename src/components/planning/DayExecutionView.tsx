@@ -13,8 +13,10 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
   PencilSquareIcon,
+  UserGroupIcon, // 新增：名單入口圖示
 } from "@heroicons/react/24/solid";
 import { getWeek, getYear } from "date-fns";
+import PeopleManager from "@/components/network/PeopleManager"; // 引入名單組件
 
 interface Habit {
   _id: string;
@@ -43,7 +45,11 @@ export default function DayExecutionView() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [weekPlan, setWeekPlan] = useState<WeekPlan | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Modal 狀態管理
   const [showHabitModal, setShowHabitModal] = useState(false);
+  const [showPeopleModal, setShowPeopleModal] = useState(false); // 🔥 新增：名單 Modal 狀態
+
   const [formData, setFormData] = useState({
     title: "",
     anchor: "",
@@ -51,10 +57,8 @@ export default function DayExecutionView() {
   });
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // 動畫狀態
+  // 動畫與排序狀態
   const [animatingId, setAnimatingId] = useState<string | null>(null);
-
-  // 排序模式狀態
   const [isReordering, setIsReordering] = useState(false);
 
   const todayStr = new Date().toISOString().split("T")[0];
@@ -63,7 +67,6 @@ export default function DayExecutionView() {
     try {
       const res = await fetch("/api/habits");
       const data = await res.json();
-      // 確保按 order 排序
       const sortedData = Array.isArray(data)
         ? data.sort((a: Habit, b: Habit) => a.order - b.order)
         : [];
@@ -104,16 +107,13 @@ export default function DayExecutionView() {
     const newHabits = [...habits];
     const targetIndex = direction === "up" ? index - 1 : index + 1;
 
-    // 交換位置
     [newHabits[index], newHabits[targetIndex]] = [
       newHabits[targetIndex],
       newHabits[index],
     ];
 
-    // 更新本地狀態以獲得即時反饋
     setHabits(newHabits);
 
-    // 更新資料庫順序
     const updatedHabits = newHabits.map((habit, idx) => ({
       id: habit._id,
       order: idx,
@@ -127,7 +127,7 @@ export default function DayExecutionView() {
       });
     } catch (error) {
       console.error("Failed to update order", error);
-      fetchHabits(); // 失敗則回滾
+      fetchHabits();
     }
   };
 
@@ -174,7 +174,7 @@ export default function DayExecutionView() {
   };
 
   const toggleHabit = async (id: string, lastDate: string) => {
-    if (isReordering) return; // 排序模式下禁用打卡
+    if (isReordering) return;
     triggerJelly(id);
     const method = lastDate === todayStr ? "DELETE" : "POST";
     try {
@@ -189,7 +189,6 @@ export default function DayExecutionView() {
     triggerJelly(`rock-${originalIndex}`);
     if (!weekPlan?.bigRocks) return;
 
-    // 正確的不可變更新 (Immutability)
     const updatedRocks = weekPlan.bigRocks.map((rock, idx) =>
       idx === originalIndex
         ? { ...rock, isCompleted: !rock.isCompleted }
@@ -258,10 +257,11 @@ export default function DayExecutionView() {
       <div className="fixed top-[-20%] right-[-20%] w-[80vw] h-[80vw] bg-indigo-600/10 rounded-full blur-[120px] -z-10 animate-pulse pointer-events-none" />
       <div className="fixed bottom-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-fuchsia-900/10 rounded-full blur-[100px] -z-10 pointer-events-none" />
 
-      {/* 1. 今日戰報 */}
+      {/* 1. 今日戰報 (已加入名單按鈕) */}
       <div className="flex-shrink-0 px-2 pb-2">
         <div className="bg-gradient-to-br from-indigo-900/80 to-slate-950/80 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-[50px] pointer-events-none" />
+
           <div className="relative z-10 flex justify-between items-start mb-4">
             <div>
               <h2 className="text-2xl font-black italic tracking-tighter">
@@ -274,10 +274,23 @@ export default function DayExecutionView() {
                 </p>
               </div>
             </div>
-            <div className="bg-white/5 p-2 rounded-2xl backdrop-blur-md border border-white/10">
-              <TrophyIcon className="w-6 h-6 text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]" />
+
+            {/* 🔥 新增：按鈕區 (獎盃 + 名單) */}
+            <div className="flex items-center gap-2">
+              {/* 名單入口按鈕 */}
+              <button
+                onClick={() => setShowPeopleModal(true)}
+                className="bg-white/5 hover:bg-white/20 p-2 rounded-2xl backdrop-blur-md border border-white/10 transition-all active:scale-95"
+              >
+                <UserGroupIcon className="w-6 h-6 text-indigo-300 drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+              </button>
+              {/* 獎盃裝飾 (不可點) */}
+              <div className="bg-white/5 p-2 rounded-2xl backdrop-blur-md border border-white/10">
+                <TrophyIcon className="w-6 h-6 text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]" />
+              </div>
             </div>
           </div>
+
           <div className="space-y-2 relative z-10">
             <div className="flex justify-between items-end px-1">
               <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-[0.2em]">
@@ -337,17 +350,12 @@ export default function DayExecutionView() {
                     key={displayIndex}
                     onClick={() => toggleBigRock(item.originalIndex)}
                     className={`bg-white/[0.03] backdrop-blur-xl p-4 rounded-[2rem] border flex flex-col justify-between flex-shrink-0 w-48 h-full max-h-[160px] cursor-pointer transition-all duration-300
-                    ${
-                      item.rock.isCompleted
-                        ? "border-emerald-500/40 bg-emerald-500/5 shadow-[0_0_20px_rgba(16,185,129,0.1)]"
-                        : "border-white/5 shadow-lg"
-                    }
+                    ${item.rock.isCompleted ? "border-emerald-500/40 bg-emerald-500/5 shadow-[0_0_20px_rgba(16,185,129,0.1)]" : "border-white/5 shadow-lg"}
                     ${isAnimating ? "animate-jelly" : "hover:border-white/20 active:scale-95"}`}
                   >
                     <div className="flex justify-between items-start">
                       <div
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shadow-inner 
-                        ${item.rock.isCompleted ? "bg-emerald-500 text-white" : "bg-white/5 text-indigo-400 border border-white/5"}`}
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shadow-inner ${item.rock.isCompleted ? "bg-emerald-500 text-white" : "bg-white/5 text-indigo-400 border border-white/5"}`}
                       >
                         {displayIndex + 1}
                       </div>
@@ -377,7 +385,7 @@ export default function DayExecutionView() {
         </div>
       </div>
 
-      {/* 3. 原子習慣 (排序開關) */}
+      {/* 3. 原子習慣 */}
       <div className="flex-1 min-h-0 flex flex-col justify-center px-2 py-1">
         <div className="flex justify-between items-center mb-1 px-2">
           <h3 className="flex items-center gap-2 font-black text-white text-sm tracking-wide">
@@ -385,7 +393,6 @@ export default function DayExecutionView() {
             原子習慣
           </h3>
           <div className="flex gap-2">
-            {/* 排序按鈕 */}
             <button
               onClick={() => setIsReordering(!isReordering)}
               className={`p-1.5 rounded-full transition-colors ${isReordering ? "bg-indigo-500 text-white" : "bg-white/5 text-slate-400 hover:bg-white/10"}`}
@@ -440,7 +447,6 @@ export default function DayExecutionView() {
                   </div>
                 )}
 
-                {/* 卡片頭部：火苗 + 累積天數 */}
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <div
@@ -450,13 +456,10 @@ export default function DayExecutionView() {
                         className={`w-4 h-4 ${isDone ? "animate-pulse" : ""}`}
                       />
                     </div>
-                    {/* 修正：將連續天數移至左側，避免與右上角按鈕重疊 */}
                     <span className="text-[10px] font-mono font-black text-amber-600/80 bg-amber-900/20 px-2 py-0.5 rounded-lg border border-amber-500/10">
                       {habit.streak} 天
                     </span>
                   </div>
-
-                  {/* 右上角：編輯按鈕 (未排序模式時顯示) */}
                   {!isReordering && (
                     <button
                       className="p-1.5 text-slate-600 hover:text-white z-10 bg-white/5 rounded-full hover:bg-white/10 transition-colors"
@@ -478,7 +481,6 @@ export default function DayExecutionView() {
                       {habit.title}
                     </p>
                   </div>
-
                   <div className="space-y-0.5">
                     <p className="text-[9px] text-slate-400 flex items-center gap-1 truncate">
                       <span className="w-1 h-1 bg-slate-500 rounded-full shrink-0" />{" "}
@@ -496,7 +498,7 @@ export default function DayExecutionView() {
         </div>
       </div>
 
-      {/* Modal: Dark Bottom Sheet */}
+      {/* --- Modal 1: 原子習慣 --- */}
       {showHabitModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-end">
           <div className="bg-[#09090b] border border-white/10 w-full rounded-t-[3rem] p-8 animate-in slide-in-from-bottom duration-300 shadow-2xl shadow-black">
@@ -583,6 +585,24 @@ export default function DayExecutionView() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- 🔥 Modal 2: 人脈名單戰情室 🔥 --- */}
+      {showPeopleModal && (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md animate-in fade-in">
+          <div className="absolute top-4 right-4 z-50">
+            <button
+              onClick={() => setShowPeopleModal(false)}
+              className="p-3 bg-white/10 rounded-full hover:bg-white/20 text-white transition-all"
+            >
+              <XMarkIcon className="w-6 h-6" />
+            </button>
+          </div>
+          {/* 直接嵌入 PeopleManager */}
+          <div className="h-full w-full pt-16 pb-4 px-4">
+            <PeopleManager />
           </div>
         </div>
       )}
