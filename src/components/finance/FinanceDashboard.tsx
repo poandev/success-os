@@ -723,7 +723,7 @@ export default function FinanceDashboard() {
                         date: e.target.value,
                       })
                     }
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 [color-scheme:dark]"
                   />
                 </div>
                 <div>
