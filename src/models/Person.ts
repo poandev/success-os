@@ -6,18 +6,18 @@ const NoteSchema = new mongoose.Schema({
 });
 
 const PersonSchema = new mongoose.Schema({
+  // ... 其他欄位保持不變 ...
   name: { type: String, required: true },
   category: { type: String, required: true, default: "Amway" },
   relationship: { type: String },
-  status: {
-    type: String,
-    enum: ["New", "Warming", "Invited", "FollowUp", "Closed", "Lost"],
-    default: "New",
-  },
+  status: { type: String, default: "New" },
   tags: [String],
-  // 🔥 修改：改為陣列結構
   notes: [NoteSchema],
   rating: { type: Number, default: 0 },
+
+  // 🔥 新增：排序欄位
+  order: { type: Number, default: 0 },
+
   created_at: { type: Date, default: Date.now },
 });
 
